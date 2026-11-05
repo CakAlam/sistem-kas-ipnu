@@ -1,0 +1,15 @@
+# Node & Frontend
+node_modules/
+dist/
+.env
+
+# Python Backend
+backend/venv/
+backend/__pycache__/
+backend/kas_ipnu.db
+backend/uploads/
+
+# Foundry / Blockchain
+blockchain/cache/
+blockchain/out/
+blockchain/broadcast/
