@@ -1,11 +1,37 @@
 import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import kasOrganisasiABI from './contracts/KasOrganisasi.json'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs' // 🔥 Pengganti xlsx yang 100% aman
+import Swal from 'sweetalert2' // 🔥 Animasi pop-up mewah
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
 const LOCAL_RPC_URL = "http://127.0.0.1:8545" 
 const NAMA_JABATAN = { 1: "Chairman", 2: "Vice Chairman", 3: "Treasurer" }
+
+// 🔥 Konfigurasi Tema Animasi Alert Glassmorphism
+const GlassAlert = Swal.mixin({
+  background: 'rgba(15, 23, 42, 0.95)',
+  color: '#E2E8F0',
+  backdrop: 'rgba(0,0,0,0.75)',
+  confirmButtonColor: '#3B82F6',
+  customClass: {
+    popup: 'swal-glass-popup',
+    title: 'swal-glass-title',
+    confirmButton: 'swal-glass-btn'
+  }
+})
+
+// 🔥 Konfigurasi Toast (Notif kecil di pojok untuk file upload)
+const GlassToast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3500,
+  timerProgressBar: true,
+  background: 'rgba(15, 23, 42, 0.95)',
+  color: '#60A5FA',
+  customClass: { popup: 'swal-glass-popup' }
+})
 
 // ==========================================
 // COMPONENT: 3D BLOCKCHAIN BACKGROUND
@@ -194,30 +220,37 @@ function App() {
 
   async function simpanNomorWA(e) {
     e.preventDefault()
-    if (!nomorWA) return alert("WhatsApp number cannot be empty!")
+    if (!nomorWA) return GlassAlert.fire('Hold on!', 'WhatsApp number cannot be empty!', 'warning')
     try {
       setLoading(true)
       const response = await fetch("http://127.0.0.1:8000/api/v1/pengurus/wa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dompet: walletAddress.toLowerCase(), jabatan: role, no_wa: nomorWA }) })
-      if (response.ok) { alert("✅ WhatsApp number successfully registered!"); setIsWaRegistered(true); } 
-      else alert("🚨 Failed to register WhatsApp number.")
-    } catch (error) { alert("🚨 Failed to connect to Python Server. Ensure the server is running!") } finally { setLoading(false) }
+      if (response.ok) { 
+        GlassAlert.fire('Success!', 'WhatsApp number successfully registered!', 'success'); 
+        setIsWaRegistered(true); 
+      } 
+      else GlassAlert.fire('Error!', 'Failed to register WhatsApp number.', 'error')
+    } catch (error) { GlassAlert.fire('Connection Error!', 'Failed to connect to Python Server. Ensure the server is running!', 'error') } finally { setLoading(false) }
   }
 
+  // 🔥 INI DIA FUNGSI SETOR KAS YANG UDAH DI-UPGRADE PAKAI ANIMASI
   async function setorKasWeb3(e) {
-    e.preventDefault(); if (!namaPenyumbang || !keteranganIuran || !nominalIuran) return alert("Please fill in all deposit form fields!")
+    e.preventDefault(); 
+    if (!namaPenyumbang || !keteranganIuran || !nominalIuran) return GlassAlert.fire('Missing Details!', 'Please fill in all deposit form fields!', 'warning')
     try {
       setLoading(true); const provider = new ethers.BrowserProvider(window.ethereum); const signer = await provider.getSigner();
       const tx = await new ethers.Contract(CONTRACT_ADDRESS, kasOrganisasiABI.abi, signer).setorKas(namaPenyumbang, keteranganIuran, { value: ethers.parseEther(nominalIuran) })
-      await tx.wait(); setNamaPenyumbang(""); setKeteranganIuran(""); setNominalIuran(""); fetchDataBlockchain(); alert("Success! Funds recorded on Blockchain.")
-    } catch (error) { alert("Failed to deposit funds.") } finally { setLoading(false) }
+      await tx.wait(); 
+      setNamaPenyumbang(""); setKeteranganIuran(""); setNominalIuran(""); fetchDataBlockchain(); 
+      GlassAlert.fire('Transaction Confirmed!', 'Funds have been successfully recorded on the Blockchain.', 'success')
+    } catch (error) { GlassAlert.fire('Transaction Failed!', 'Failed to deposit funds. Check your wallet balance or network connection.', 'error') } finally { setLoading(false) }
   }
 
   async function ajukanDanaWeb3(e) {
     e.preventDefault(); 
-    if (!judul || !rincianSingkat || !nominal || !tujuan) return alert("Please fill in all proposal text fields (File is optional)!"); 
-    if (!ethers.isAddress(tujuan)) return alert("🚨 INVALID WALLET ADDRESS!"); 
+    if (!judul || !rincianSingkat || !nominal || !tujuan) return GlassAlert.fire('Missing Details!', 'Please fill in all proposal text fields (File is optional)!', 'warning'); 
+    if (!ethers.isAddress(tujuan)) return GlassAlert.fire('Invalid Address!', 'The destination wallet address is invalid.', 'error'); 
     if (parseFloat(nominal) > parseFloat(saldoBrankas)) {
-      return alert(`🚨 PROPOSAL REJECTED: Current Treasury Balance is only ${saldoBrankas} ETH. Insufficient funds to withdraw ${nominal} ETH!`);
+      return GlassAlert.fire('Insufficient Funds!', `Current Treasury Balance is only ${saldoBrankas} ETH. Cannot withdraw ${nominal} ETH!`, 'error');
     }
 
     try {
@@ -227,22 +260,20 @@ function App() {
         try { 
           const response = await fetch("http://127.0.0.1:8000/api/v1/proposal/hybrid", { method: "POST", body: formData });
           if (!response.ok) throw new Error("Failed");
-          alert("Physical Document secured in Web2! Proceeding with Web3 confirmation...");
+          GlassToast.fire({ icon: 'info', title: 'Document secured in Web2! Proceeding to Web3...' });
           bawaBerkas = true; 
-        } catch (err) { alert("Failed to connect to Python Web2, but Web3 proposal will proceed without file."); }
-      } else {
-        alert("Proposal without physical document. Proceeding with Web3 confirmation...");
+        } catch (err) { GlassToast.fire({ icon: 'warning', title: 'Web2 Error! Proceeding without file...' }); }
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum); const signer = await provider.getSigner();
       const tx = await new ethers.Contract(CONTRACT_ADDRESS, kasOrganisasiABI.abi, signer).ajukanDana(judul, rincianSingkat, ethers.parseEther(nominal), tujuan, bawaBerkas)
       await tx.wait();
       
-      alert("Fund Proposal Draft officially added to Queue!");
+      GlassAlert.fire('Proposal Submitted!', 'Fund Proposal Draft has been officially added to the Multi-Sig Queue!', 'success');
 
       try { await fetch("http://127.0.0.1:8000/api/v1/notif/pengajuan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ judul, nominal }) }); } catch (err) {}
       setJudul(""); setRincianSingkat(""); setNominal(""); setTujuan(""); setFileProposal(null); fetchDataBlockchain(); 
-    } catch (error) { alert("Failed to submit proposal. Ensure your wallet balance is sufficient for Gas Fees."); } finally { setLoading(false) }
+    } catch (error) { GlassAlert.fire('Transaction Failed!', 'Failed to submit proposal. Ensure your wallet balance is sufficient for Gas Fees.', 'error'); } finally { setLoading(false) }
   }
 
   async function setujuiPencairanWeb3(idTarget) {
@@ -250,13 +281,13 @@ function App() {
       const pengajuanTarget = antreanPengajuan.find(p => p.id === idTarget);
       
       if (pengajuanTarget && pengajuanTarget.approvalCount === "1" && role !== "ketua" && !pengajuanTarget.ketuaHasApproved) {
-        return alert("🚨 DENIED (Frontend Authorization): First signature is not from the Chairman. The decisive signature MUST be from the CHAIRMAN. Vice Chairman and Treasurer cannot unilaterally withdraw funds!");
+        return GlassAlert.fire('Access Denied!', 'First signature is not from the Chairman. The decisive signature MUST be from the CHAIRMAN. Vice Chairman and Treasurer cannot unilaterally withdraw funds!', 'error');
       }
       
       setLoading(true); const provider = new ethers.BrowserProvider(window.ethereum); const signer = await provider.getSigner();
       const tx = await new ethers.Contract(CONTRACT_ADDRESS, kasOrganisasiABI.abi, signer).setujuiPencairan(idTarget); await tx.wait();
       
-      alert("Signature successfully attached!");
+      GlassAlert.fire('Signature Attached!', 'Your cryptographic signature has been attached successfully. Transaction authorized.', 'success');
 
       if (pengajuanTarget && pengajuanTarget.approvalCount === "1") {
         try { await fetch("http://127.0.0.1:8000/api/v1/notif/cair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ judul: pengajuanTarget.judul }) }); } catch (err) {}
@@ -264,36 +295,35 @@ function App() {
       fetchDataBlockchain(); 
     } catch (error) { 
       if (error && error.message && error.message.includes("DITOLAK: TTD kedua WAJIB dari Ketua!")) {
-        alert("🚨 CONTRACT DENIED: Decisive signature MUST be executed by the CHAIRMAN.");
+        GlassAlert.fire('Contract Denied!', 'Decisive signature MUST be executed by the CHAIRMAN.', 'error');
       } else {
-        alert("Failed to approve transaction.");
+        GlassAlert.fire('Transaction Failed!', 'Failed to approve transaction. Ensure you have not signed this already.', 'error');
       }
     } finally { setLoading(false) }
   }
 
   async function eksekusiPemulihan() {
-    if (!ethers.isAddress(dompetPemulihanBaru)) return alert("Invalid new wallet address!")
+    if (!ethers.isAddress(dompetPemulihanBaru)) return GlassAlert.fire('Invalid Address!', 'Please enter a valid Ethereum wallet address.', 'warning')
     try {
       setLoading(true); const provider = new ethers.BrowserProvider(window.ethereum); const signer = await provider.getSigner();
       const tx = await new ethers.Contract(CONTRACT_ADDRESS, kasOrganisasiABI.abi, signer).pulihkanKunci(targetPemulihan, dompetPemulihanBaru); await tx.wait();
-      fetchDataBlockchain(); setDompetPemulihanBaru(""); alert("Recovery vote recorded!")
-    } catch (error) { alert("Failed! Ensure you are not voting for your own key."); } finally { setLoading(false) }
+      fetchDataBlockchain(); setDompetPemulihanBaru(""); 
+      GlassAlert.fire('Vote Recorded!', 'Your recovery vote has been successfully submitted to the blockchain.', 'success')
+    } catch (error) { GlassAlert.fire('Vote Failed!', 'Ensure you are not voting for your own key or have already voted.', 'error'); } finally { setLoading(false) }
   }
 
   const handleLoginWeb2 = (e) => {
     e.preventDefault()
-    // NOTE: username dan password tetap dipertahankan sesuai aslinya (bendahara, ipnu123, dst.) 
-    // karena ini kredensial mock login dan tidak merusak logika role
     if (username === "bendahara" && password === "ipnu123") { setRole("bendahara"); setIsLoggedIn(true); setViewMode("dashboard"); }
     else if (username === "ketua" && password === "ipnu123") { setRole("ketua"); setIsLoggedIn(true); setViewMode("dashboard"); }
     else if (username === "wakil" && password === "ipnu123") { setRole("wakil"); setIsLoggedIn(true); setViewMode("dashboard"); }
-    else alert("Incorrect Username or Password!")
+    else GlassAlert.fire('Login Failed', 'Incorrect Username or Cryptographic Password!', 'error')
   }
 
   async function connectWallet() {
     if (window.ethereum) {
       try { setWalletAddress((await window.ethereum.request({ method: 'eth_requestAccounts' }))[0]) } catch (err) { }
-    } else alert("MetaMask is not installed!")
+    } else GlassAlert.fire('Wallet Not Found', 'MetaMask extension is not installed in your browser!', 'warning')
   }
 
   const formatWaktu = (timestamp) => (!timestamp || timestamp === 0) ? "-" : new Date(timestamp * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
@@ -306,12 +336,75 @@ function App() {
   const pemasukanBulanIni = laporanPemasukan.filter(item => filterByBulan(item.waktu));
   const pengeluaranBulanIni = laporanPengeluaran.filter(item => filterByBulan(item.waktu));
 
-  const handleExportExcel = () => {
-    if (pemasukanBulanIni.length === 0 && pengeluaranBulanIni.length === 0) return alert("No data available this month for export!");
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pemasukanBulanIni.map((item, i) => ({"No": i+1, "Transaction Time": formatWaktu(item.waktu), "Sender Name": item.nama, "Memo/Description": item.keterangan, "Amount (ETH)": item.nominal}))), "Income Report"); 
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pengeluaranBulanIni.map((item, i) => ({"No": i+1, "Withdrawal Time": formatWaktu(item.waktu), "Proposal Title": item.judul, "Proposal Details": item.rincian, "Target Wallet": item.tujuan, "Amount (ETH)": item.nominal}))), "Expenditure Report");
-    XLSX.writeFile(wb, `Treasury_Report_${filterBulan}.xlsx`);
+  // 🔥 FUNGSI EXPORT YANG SUDAH DI-UPGRADE MENGGUNAKAN EXCELJS
+  const handleExportExcel = async () => {
+    if (pemasukanBulanIni.length === 0 && pengeluaranBulanIni.length === 0) {
+      return GlassAlert.fire('No Data', 'No data available this month for export!', 'info');
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Sistem Kas IPNU';
+      workbook.created = new Date();
+
+      const incomeSheet = workbook.addWorksheet('Income Report');
+      incomeSheet.columns = [
+        { header: 'No', key: 'no', width: 5 },
+        { header: 'Transaction Time', key: 'waktu', width: 25 },
+        { header: 'Sender Name', key: 'nama', width: 25 },
+        { header: 'Memo/Description', key: 'memo', width: 35 },
+        { header: 'Amount (ETH)', key: 'nominal', width: 15 }
+      ];
+      incomeSheet.getRow(1).font = { bold: true };
+      incomeSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF60A5FA' } };
+      
+      pemasukanBulanIni.forEach((item, i) => {
+        incomeSheet.addRow({ 
+          no: i+1, 
+          waktu: formatWaktu(item.waktu), 
+          nama: item.nama, 
+          memo: item.keterangan, 
+          nominal: item.nominal 
+        });
+      });
+
+      const expSheet = workbook.addWorksheet('Expenditure Report');
+      expSheet.columns = [
+        { header: 'No', key: 'no', width: 5 },
+        { header: 'Withdrawal Time', key: 'waktu', width: 25 },
+        { header: 'Proposal Title', key: 'judul', width: 30 },
+        { header: 'Proposal Details', key: 'rincian', width: 40 },
+        { header: 'Target Wallet', key: 'tujuan', width: 45 },
+        { header: 'Amount (ETH)', key: 'nominal', width: 15 }
+      ];
+      expSheet.getRow(1).font = { bold: true };
+      expSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCA5A5' } };
+
+      pengeluaranBulanIni.forEach((item, i) => {
+        expSheet.addRow({ 
+          no: i+1, 
+          waktu: formatWaktu(item.waktu), 
+          judul: item.judul, 
+          rincian: item.rincian, 
+          tujuan: item.tujuan, 
+          nominal: item.nominal 
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `Treasury_Report_${filterBulan}.xlsx`;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+      
+      GlassToast.fire({ icon: 'success', title: 'Excel report downloaded!' });
+    } catch (error) {
+      console.error(error);
+      GlassAlert.fire('Error', 'Failed to generate Excel file.', 'error');
+    }
   }
 
   const dompetSesuai = !walletAddress || walletAddress.toLowerCase() === alamatResmi[role];
@@ -400,6 +493,17 @@ function App() {
           }
           .btn-remove-file:hover { background: rgba(239, 68, 68, 0.2); color: #FFF; transform: scale(1.15); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); border-color: rgba(239, 68, 68, 0.6); }
           .btn-remove-file:active { transform: scale(0.9); }
+
+          /* 🔥 KUSTOMISASI CSS SWEETALERT BIAR NYATU SAMA TEMA GLASSMORPHISM */
+          .swal-glass-popup {
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+          }
+          .swal-glass-title { font-family: 'Inter', sans-serif !important; font-weight: 700 !important; }
+          .swal-glass-btn { border-radius: 10px !important; font-weight: 600 !important; letter-spacing: 0.5px !important; padding: 12px 28px !important; }
         `}
       </style>
 
