@@ -26,7 +26,7 @@ Developed as an undergraduate thesis research project on Web3 Smart Contract Cry
 * XLSX (Report Generation)
 
 **Backend (Off-Chain Services)**
-* Python Flask (API & Notification Service)
+* Python Flask / FastAPI (API & Notification Service)
 * SQLite (Local Web2 State & Access Gates)
 * **Fonnte API** (WhatsApp Notification Gateway)
 
@@ -58,7 +58,8 @@ sistem-kas-ipnu/
     ├── package.json           # Frontend dependencies
     └── vite.config.js         # Vite bundler configuration
 
-⚙️ Installation & Setup
+
+## ⚙️ Installation & Setup
 1. Prerequisites
 Ensure you have the following installed:
 
@@ -82,7 +83,7 @@ anvil
 In a new terminal, deploy the Smart Contract:
 
 Bash
-forge script script/DeployKas.s.sol --rpc-url [http://127.0.0.1:8545](http://127.0.0.1:8545) --broadcast
+forge script script/DeployKas.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 Copy the deployed contract address and update the CONTRACT_ADDRESS variable in frontend/src/App.jsx.
 
 Copy the generated ABI from blockchain/out/KasOrganisasi.sol/KasOrganisasi.json to frontend/src/contracts/ and backend/.
@@ -101,13 +102,13 @@ Create a new file named .env inside the backend/ directory and configure the fol
 
 Cuplikan kode
 # Local Ethereum Node RPC URL (Anvil default)
-WEB3_PROVIDER_URI=[http://127.0.0.1:8545](http://127.0.0.1:8545)
+WEB3_PROVIDER_URI=http://127.0.0.1:8545
 
 # The Smart Contract address generated from Step 2
 CONTRACT_ADDRESS=0xYourDeployedContractAddressHere
 
 # Fonnte API Token for WhatsApp Notifications
-# Get your token at: [https://md.fonnte.com/](https://md.fonnte.com/)
+# Get your token at: https://md.fonnte.com/
 FONNTE_TOKEN=your_fonnte_api_token_here
 Start the Flask server (the SQLite database will be initialized automatically):
 
