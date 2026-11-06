@@ -140,7 +140,7 @@ This repository is strictly configured for a **Local Development Environment** (
 1. **Hardcoded Test Accounts:** The authorized multi-sig wallet addresses (Chairman, Vice, Treasurer) are currently falling back to Foundry Anvil's default deterministic test accounts in the deployment script.
    * **Production Fix:** For Mainnet/Testnet deployment, the script uses `vm.envOr()` to dynamically accept real organization wallet addresses via environment variables, preventing unauthorized access by bots scanning for exposed testnet private keys.
 2. **Mocked Web2 Authentication:** Frontend login credentials (e.g., `ipnu123`) are currently hardcoded on the client-side for rapid demonstration of the Web3 gating mechanism.
-   * **Production Fix:** Implement a backend authentication route in Flask using JSON Web Tokens (JWT) and Bcrypt password hashing to secure the Web2 dashboard. 
+   * **Production Fix:** Implement a backend authentication route in Flask using JSON Web Tokens (JWT) and Bcrypt password hashing to secure the Web2 dashboard. (Note: A compromised Web2 dashboard still cannot authorize Web3 fund transfers without the cryptographically verified MetaMask signature).
 3. **Centralized Off-Chain Storage:** Physical document proofs (proposals/receipts) are currently stored in the local SQLite/Python `uploads/` directory. 
    * **Production Fix:** Future iterations should migrate off-chain document storage to a decentralized file system like **IPFS (Pinata/Web3.Storage)**, saving only the IPFS CID hashes on the blockchain to eliminate a single point of failure.
 
